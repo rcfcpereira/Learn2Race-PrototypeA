@@ -1,0 +1,20 @@
+# References (full entries: docs/references.md at the repository root):
+#   [R2] Dragster rules: start threshold
+# More details: README.md of this package
+
+# Dragster light-triggered start action defaults.
+drag_race_start_action_server:
+  ros__parameters:
+    action_name: /dragster/start_race
+    light_topic: /dragster/light_ratio
+    # Use /cmd_vel_setpoint when running through learn2race_control PID.
+    cmd_vel_topic: /cmd_vel
+    # Used only when an action goal sends threshold_ratio < 0.0.
+    default_threshold_ratio: 0.65
+    default_min_delta_ratio: 0.15
+    default_stable_baseline_s: 0.5
+    default_timeout_s: 10.0
+    default_rising_edge: true
+    trigger_hold_s: 0.03
+    max_sample_age_s: 0.25
+    command_rate_hz: 50.0

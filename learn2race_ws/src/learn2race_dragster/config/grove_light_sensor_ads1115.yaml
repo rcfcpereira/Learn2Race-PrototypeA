@@ -1,0 +1,17 @@
+# References (full entries: docs/references.md at the repository root):
+#   [R70] ADS1115 / ADS7830 / PCF8591 datasheets: ADS1115 gain and rate
+# More details: README.md of this package
+
+# Grove Light Sensor v1.2 through ADS1115 ADC defaults.
+grove_light_sensor_ads1115_node:
+  ros__parameters:
+    i2c_bus: 1
+    adc_address: 0x48
+    adc_channel: 0
+    adc_gain_v: 4.096
+    adc_data_rate_sps: 128
+    reference_voltage: 3.3
+    publish_rate_hz: 100.0
+    voltage_topic: /dragster/light_voltage
+    ratio_topic: /dragster/light_ratio
+    dry_run: false

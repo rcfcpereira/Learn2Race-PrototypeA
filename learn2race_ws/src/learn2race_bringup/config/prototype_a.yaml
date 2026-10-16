@@ -1,0 +1,239 @@
+# References (full entries: docs/references.md at the repository root):
+#   [R1]  TrackBotGP rules 2026: race rules behind the referee settings
+#   [R60] Waveshare General Driver for Robots: board
+#   [R62] CHP-20GP-180ABHL motor datasheet: drivetrain
+#   [R67] LTR-303ALS-01 datasheet: start light
+# More details: README.md of this package
+
+# Prototype A - dual purpose: competition entrant and classroom platform.
+# CHP-20GP-180ABHL geared motors, Waveshare General Driver (ESP32 + micro-ROS),
+# STL-06P LiDAR via the driver board, camera line following.
+#
+# Geometry below matches the firmware. Encoder odometry is calculated there;
+# these metadata fields do not override the compiled firmware constants.
+
+/**:
+  ros__parameters:
+    robot_name: learn2race_a
+    use_sim_time: false
+
+# mode, competition_mode and require_scan are set by prototype_a.launch.py
+# arguments. Do not add them here: a node-specific key in this file overrides
+# the launch file's values, which silently disables mode:=, allow_teleop:=,
+# teleop:= and require_scan:=.
+
+competition_fsm:
+  ros__parameters:
+    total_laps: 3
+    pit_after_lap: 2
+    pit_min_seconds: 5.3        # rules: at least 5 s; 5.5 put lap 2 at 63-64 s (limit 60)
+    lap_timeout_seconds: 120.0  # a 10 m drag at 0.08 m/s test speed takes 125 s
+
+dragster_referee:
+  ros__parameters:
+    start_rise_ratio: 1.5       # start light must be 1.5x ambient...
+    start_min_rise: 50.0        # ...and at least this many raw LTR303 counts above it
+    start_confirm_samples: 2    # consecutive 100 ms samples
+    # No finish before 8 m: completed runs confirmed the finish at 9.88-10.43 m,
+    # false finishes came at 1.4-6.0 m after an early line loss (2026-10-09).
+    # Set to ~80 % of the distance to the finish line on another track.
+    finish_ignore_m: 8.0
+    # 1 frame: at 1.0 m/s the finish T crosses the steering row in 1-2 frames.
+    # Safe with finish_ignore_m 8 m (false bands came at 1.4-6.0 m).
+    finish_confirm_frames: 1
+    finish_clear_frames: 3      # band must disappear before the next one counts
+    # The robot must come to rest between the finish line and the stop line
+    # 0.5 m after it. The firmware short-brakes on the stop command, and the
+    # stop is commanded when the camera sees the stop line ahead. If the robot
+    # still reaches the stop line, use stop_band: 1 with finish_overrun_m of
+    # about 0.15 to aim at the middle of the zone. The "At rest" log line
+    # gives the braking distance for tuning.
+    # 2026-10-09, 0.5 m/s: with stop_band 2 the robot came to rest on the stop
+    # line (0.54 m past where the finish band was confirmed, braking 0.01 m).
+    # Now: stop on the finish line plus 0.30 m. The band is confirmed ~0.125 m
+    # ahead of the axle, so the axle stops ~0.17 m past the line: the robot is
+    # over it with ~0.3 m left before the stop line.
+    stop_band: 1                # 1 = finish line, 2 = stop line
+    finish_overrun_m: 0.20      # straight on (follower off) by odometry after the finish T, then stop
+    max_distance_m: 11.0        # finish at 10 m: stop even if the band is missed
+
+# TrackBotGP (mode:=trackbotgp). Rules 2026: 3 laps, pit stop >= 5 s after
+# lap 2, entering the pit lane before the finish line. Distances are odometry
+# metres; the referee logs each lap's length and where it armed, forked and
+# stopped, so a practice lap gives the numbers to tune.
+gp_referee:
+  ros__parameters:
+    start_rise_ratio: 1.5
+    start_min_rise: 50.0
+    start_confirm_samples: 2
+    # Monza, Portimao and Suzuka all have the pit lane on the inside of the
+    # start/finish straight. auto takes the inside from lap 1's direction
+    # (anticlockwise = left, clockwise = right; Portimao is normally run
+    # clockwise). Suzuka is a figure of eight: set left or right there.
+    pit_side: right             # confirmed on the practice track 2026-10-01 (auto = from lap 1)
+    start_ignore_m: 0.5         # the finish line is right in front at the start
+    min_first_lap_m: 5.4        # ~70% of the 7.8 m practice lap (2026-10-01): earlier bands are not the finish
+    min_lap_fraction: 0.7       # later laps: bands before 70% of a lap are corners
+    # Practice track lap length: the reference for every distance rule, so a
+    # missed finish line cannot double lap 1 (2026-10-01 23:47: lap 1 counted
+    # as 16.3 m, then six laps driven). Clean laps measured 7.35-7.95 m.
+    expected_lap_m: 8.1         # 2026-10-02 00:41-00:50: nine laps of 8.00-8.15 m
+    missed_finish_fraction: 1.35  # no finish line by 1.35 laps: count the lap anyway
+    band_spin_radius_m: 0.03    # bands hidden only while pivoting, not in fast curves
+    # The finish line is a band with the pit split (0.3 m before it) or the
+    # chequered marker beside it, and the pit entry is a split with the band
+    # beside it. A lone band or a lone split is something else: on
+    # 2026-10-02 00:02 a band 1.27 m before the finish line ended laps 1 and
+    # 3 early, and a lone split 1.8 m before it was taken for the pit.
+    pair_window_m: 0.5
+    # 00:28: the camera sees the pit split as a V, which was called a band;
+    # now it is a split, and the band beside it (the checker) is seen only
+    # from the main line. Laps are counted at the real line, so a split
+    # after arming (1.2 m before the line) is the pit.
+    pit_needs_band: false
+    pit_arm_fraction: 0.6       # prefer the pit branch after 60% of lap 2...
+    # ...unless this is > 0: arm this far before the end of the lap (lap 1).
+    # Pit split 0.3 m before the finish line. 0.7 m worked at 0.3 m/s (laps
+    # 7.81/7.92/7.80 m) but at 0.5 m/s laps measured 8.13/7.02/9.87 m and
+    # lap 2 ended before arming (2026-10-01). 1.5 m allows for that scatter;
+    # on the old 5.3 m layout a false split sat 1.1 m before the finish.
+    # 1.2: at 0.3 m/s lap lengths scatter +/-0.4 m (7.94 then 7.58 m): with
+    # 0.7 the pit armed at 7.25 m, past the split (~7.28 m), and was missed.
+    # 0.9: with laps counted at the real line (8.0-8.15 m) the split is taken
+    # at 7.6 m every time; arming at 7.2 m shortens the slow pit approach.
+    pit_arm_before_finish_m: 0.9
+    pit_stop_after_m: 0.5       # stop this far past the pit fork...
+    pit_stop_grace_m: 0.5       # ...once the line is seen there (or this much further)
+    pit_approach_speed: 0.15    # m/s from arming the pit to the stop: keep the pit branch in view
+    pit_exit_m: 1.0             # keep the pit-side preference through the merge
+    after_pit_min_fraction: 0.5 # ignore bands (the main finish line) near the pit
+    max_final_lap_fraction: 1.3 # stop anyway if the last finish line is missed
+    finish_overrun_m: 0.15      # camera sees the line ahead: count it once crossed
+    band_confirm_frames: 2
+    band_clear_frames: 3
+    fork_confirm_frames: 2
+
+cmd_vel_mux:
+  ros__parameters:
+    publish_hz: 50.0          # also the worst-case added latency: 20 ms
+    source_timeout_seconds: 0.5
+
+safety_monitor:
+  ros__parameters:
+    odom_timeout_seconds: 0.5
+    imu_timeout_seconds: 1.0
+
+led_signalling:
+  ros__parameters:
+    flash_hz: 4.0
+    finish_flash_count: 3
+    colour_ready:    [0, 255, 0]
+    colour_lap:      [0, 0, 255]
+    colour_pit_in:   [255, 200, 0]
+    colour_pit_hold: [255, 100, 0]
+    colour_finish:   [255, 255, 255]
+    colour_fault:    [255, 0, 0]
+
+line_array:
+  ros__parameters:
+    i2c_bus: 1
+    address: 0x48
+    channels: 8
+    publish_hz: 100.0
+    calibrate: false
+    calibration_min: [0, 0, 0, 0, 0, 0, 0, 0]
+    calibration_max: [255, 255, 255, 255, 255, 255, 255, 255]
+    on_line_threshold: 0.45
+    filter_alpha: 0.4
+
+ltr303:
+  ros__parameters:
+    i2c_bus: 1
+    address: 0x29
+    publish_hz: 10.0
+
+i2c_display:
+  ros__parameters:
+    i2c_bus: 1
+    i2c_address: 0x3c
+    width: 128
+    height: 32
+    refresh_hz: 4.0         # also the scroll speed of long fault reasons
+    text_scale: 1           # 1: one 4-line screen; 2: large text, rotating pages
+    page_seconds: 3.0       # page time when text_scale is 2
+    rotate: 0               # 180 if the OLED is mounted upside down
+    battery_timeout_s: 3.0
+
+# Used only with sensor_host:=pi and esp32dev_pi_sensors firmware. The board
+# bus must be physically wired to the Pi; the default ESP32 profile owns it.
+prototype_a_sensors:
+  ros__parameters:
+    i2c_bus: 1
+    imu_address: 0x6b
+    mag_address: 0x0c
+    battery_address: 0x42
+    light_address: 0x29
+    shunt_ohms: 0.01  # R11 = 0.01R, DC_IN -> VIN: measures the 5 V regulator branch, NOT the motors (VM is on DC_IN)
+    frame_id: imu_link
+    # Remap raw chip axes to the body frame (x forward, y left, z up): out[i] = sign[i] * raw[source[i]].
+    # Corrected 2026-10-13 after the six-position test (docs/data/tests/session4/accel6_analysis.txt):
+    # the old [0, 1, 2] / [1, -1, -1] published the body frame turned 90 deg about z (forward on y).
+    imu_sources: [1, 0, 2]
+    imu_signs: [-1, -1, -1]
+    # Body-frame values (after the remap), measured 2026-10-07 with calibrate_imu
+    # and calibrate_magnetometer: docs/data/tests/session1/*_calibration.txt.
+    # gyro_bias re-ordered for the corrected remap (was [0.0569, -0.0309, 0.0138]).
+    gyro_bias: [-0.0309, -0.0569, 0.0138]      # rad/s, robot still, 60 s warm-up
+    mag_sources: [0, 1, 2]
+    mag_signs: [1, -1, -1]
+    mag_offset_ut: [84.9, -94.4, -177.5]       # hard iron, motors unpowered
+    battery_cells: 3
+    cell_floor_v: 3.5
+    cell_full_v: 4.2
+
+# --- Geometry -----------------------------------------------------------
+# Prototype A is a rear-wheel differential drive with a front ball caster.
+#
+# base_link sits at the MIDPOINT OF THE DRIVEN AXLE, not at the geometric
+# centre of the chassis. Differential-drive kinematics are referenced to the
+# axle, so placing the frame elsewhere makes the pose correct while the robot
+# appears to swing sideways whenever it turns.
+#
+# Every sensor is ahead of that axle, so each has a lever arm: when the robot
+# rotates in place, the sensors translate. The offsets below are what the URDF
+# and the controllers need, measured forward from the axle midpoint.
+geometry:
+  ros__parameters:
+    base_link_at: driven_axle
+    caster_offset_x: 0.0        # MEASURE: caster contact point ahead of axle
+    caster_offset_y: 0.0        # caster is centered on the robot
+    caster_diameter_m: 0.065    # measured caster diameter
+    line_array_offset_x: 0.0    # MEASURE: array ahead of axle (look-ahead)
+    camera_offset_x: 0.0        # MEASURE
+    camera_offset_z: 0.0        # MEASURE: height above ground
+    lidar_offset_x: 0.0         # MEASURE
+    lidar_offset_z: 0.0         # MEASURE
+    start_sensor_offset_x: 0.0  # MEASURE: the rule-exempt protrusion
+
+odometry:
+  ros__parameters:
+    wheel_radius: 0.0325
+    track_width: 0.1755       # derived from 204 mm outer / 147 mm inner axle width
+    encoder_ppr: 11           # measured: 1276 counts per wheel turn
+    gear_ratio: 29.16         # datasheet: 320.76 hall pulses / 11 PPR
+    # Rear-drive: the caster is unloaded in acceleration and loaded in braking.
+    # A ball caster can judder under load, which shows up as run-to-run spread
+    # in stopping distance rather than as a bias.
+
+track_controller:
+  ros__parameters:
+    # The line array sits ahead of the pivot, so its lateral error is amplified
+    # by the lever arm: a given steering rate moves the array further than it
+    # moves the robot. This makes the loop responsive but prone to oscillation,
+    # and the proportional gain must be tuned with the measured
+    # line_array_offset_x rather than copied from a centre-pivot platform.
+    # As a starting point, reduce the gain in proportion to the offset.
+    lookahead_m: 0.0            # set from geometry.line_array_offset_x
+    kp: 1.0
+    kd: 0.0
+    max_angular: 2.0

@@ -1,0 +1,19 @@
+# References (full entries: docs/references.md at the repository root):
+#   [R34] Zhang (2000) camera calibration: checkerboard target
+# More details: README.md of this package; Learn2Race-PrototypeB: firmware/calibration/checkerboard_8x6_25mm_A4.pdf
+
+# Default checkerboard and camera parameters for stereo calibration.
+stereo_camera_calibration:
+  checkerboard:
+    # camera_calibration expects COLSxROWS internal checkerboard corners.
+    size: 8x6
+    square_m: 0.025
+  cameras:
+    left_camera: 0
+    right_camera: 1
+    width: 640
+    height: 480
+    sensor_mode: "3280:2464"
+  synchronisation:
+    approximate_sync_s: 0.05
+    calibrator_delay_s: 4.0

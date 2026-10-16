@@ -1,0 +1,40 @@
+# References (full entries: docs/references.md at the repository root):
+#   [R2]  Dragster rules: dragster start
+#   [R10] ROS 2 Jazzy documentation: ROS 2 actions
+# More details: README.md of this package
+
+# Goal
+# Absolute light ratio threshold, 0.0..1.0. Use 0.0 to rely only on min_delta_ratio.
+# Use a negative value to use the server's configured default threshold.
+float32 threshold_ratio
+# Required rise/fall from the measured baseline before the start is accepted.
+float32 min_delta_ratio
+# Seconds used to average the ambient baseline before arming.
+float32 stable_baseline_s
+# Maximum wait time after arming. Use 0.0 for package default.
+float32 timeout_s
+# Edge mode: 0 = server default, 1 = start on brighter light,
+# -1 = start on darker light.
+int8 edge_mode
+# If true, the action publishes a launch Twist after the light trigger.
+bool publish_launch_command
+float32 launch_linear_mps
+float32 launch_angular_radps
+float32 launch_duration_s
+---
+# Result
+bool started
+bool timed_out
+bool cancelled
+bool rising_edge
+float32 baseline_ratio
+float32 trigger_ratio
+builtin_interfaces/Time start_time
+string message
+---
+# Feedback
+float32 light_ratio
+float32 baseline_ratio
+float32 elapsed_s
+bool armed
+string state

@@ -1,0 +1,36 @@
+# References (full entries: docs/references.md at the repository root):
+#   [R1] TrackBotGP rules 2026: Suzuka track, Figure 6
+# TrackBotGP Suzuka: race settings that depend on the layout, over
+# prototype_a.yaml. Select with track:=suzuka.
+#
+# A figure of eight (rules, Figure 6): the line crosses itself once, where
+# the follower goes straight across (detector: a stripe with four ends is a
+# crossing), and lap 1 turns ~0 deg in total, so the turning direction
+# cannot tell the pit side. pit_side auto then takes the side of the split
+# seen just before the lap 1 finish line (the pit lane splits off there).
+# The lap length is not known yet: lap 1 is the reference until a clean
+# race gives the measured laps for expected_lap_m.
+# 2026-10-16: a crossing map (drawn crossing positions and headings, follower crossing_map) and a 0.20 m
+# IMU hold were tried in four races and made it worse (the hold drove off the line at the pit rejoin;
+# with wide windows the map fired at the hairpins). Back to the settings above; the follower code
+# for both stays, off by default. Next: test the detector offline on recorded frames first.
+# Follower arguments for this track, read by tools/robot.sh: Suzuka's pit lane
+# leaves the main line straight on, so splits take the main line.
+# robot.sh follower: split_prefer_main:=true crossing_hold:=true hairpin_latch_frames:=30 merged_width_ratio:=1.6 bumpless_steering:=true hairpin_after_crossing_frames:=15 bend_after_crossing_frames:=40
+gp_referee:
+  ros__parameters:
+    # 2026-10-02 02:09: lap 1 turned -216 deg (meaningless on a figure of
+    # eight) and the split was not seen before the line; just after the
+    # finish line the pit lane was seen merging from the LEFT. Wrong for the
+    # practice track as laid out on 2026-10-08: committed to the RIGHT branch
+    # at the split, the robot drove a straight lane with the chequered finish
+    # marker beside it on its left and never crossed the finish line (runs
+    # 23:34 and 23:41, a 58 s loop through the pit lane). The right branch is
+    # the pit lane.
+    pit_side: right
+    # Drawn lap (rules Figure 6 scaled by the 20 mm line, docs/data/tests/track_lengths_from_rules.txt):
+    # 6.96 m. The wheel-odometry lap is ~0.88-0.905 of the drawn one on Monza and Portimao (the axle cuts
+    # inside the curves), so 6.2 m until a clean Suzuka race measures it (2026-10-16).
+    expected_lap_m: 6.2
+    min_first_lap_m: 3.0        # bands before 3 m are not the finish line
+    pit_arm_before_finish_m: 1.0

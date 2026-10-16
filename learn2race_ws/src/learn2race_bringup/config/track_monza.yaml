@@ -1,0 +1,23 @@
+# References (full entries: docs/references.md at the repository root):
+#   [R1] TrackBotGP rules 2026: Monza track, Figure 4
+# TrackBotGP Monza: race settings that depend on the layout, over
+# prototype_a.yaml. Select with track:=monza.
+#
+# Pit lane on the inside of the start/finish straight (rules, Figure 4); the
+# side is taken from lap 1's direction (clockwise = right). The lap length
+# was measured on the practice track: 5.41 m (2026-10-02 01:39, lap 1 at
+# 27 s, driven clockwise: pit lane on the right).
+# Follower arguments, read by tools/robot.sh. No bend slowdown: it was added
+# for Suzuka after the good runs here (Portimao 2026-10-01 01:46, Monza
+# 2026-10-02 01:39) and made Monza twice as slow (2026-10-09: 63/66/33 s).
+# robot.sh follower: bend_speed:=0.0
+gp_referee:
+  ros__parameters:
+    # Right, as measured on 2026-10-02 01:39 (lap 1 turned -398 deg). Left to
+    # auto on 2026-10-09 the referee took the split for a left pit lane (the
+    # follower read "crossings" at the split): lap 2 stopped on the main line
+    # and lap 3 drove the pit lane past the finish line.
+    pit_side: right
+    expected_lap_m: 5.4         # a missed finish line cannot double a lap; drawn lap 6.13 m (wheel odometry ~0.88 of it)
+    min_first_lap_m: 3.8        # ~70% of the lap: earlier bands are not the finish line
+    pit_arm_before_finish_m: 1.0  # armed at 4.4 m, split seen at 4.9 m

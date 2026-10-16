@@ -1,0 +1,1 @@
+firmware-a v13 (speed control: feedforward from measured 39.5 rad/s at duty 200, gains rescaled)

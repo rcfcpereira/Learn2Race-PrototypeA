@@ -1,0 +1,77 @@
+# Learn2Race robot description: Prototype A.
+#
+# The one place that records which robot this repository builds and the
+# calibration constants that make its measurements comparable (NFR3). Two units
+# built from the same release should differ only in this file.
+#
+# The values are not loaded by the firmware: the ESP32 constants are compiled
+# from firmware/platformio.ini, and the ROS nodes read
+# learn2race_ws/src/learn2race_bringup/config/prototype_a.yaml. Instead,
+# tools/check_robot_config.py compares those files with this one and fails on
+# any difference, and tools/update_robot.sh runs that check before every
+# rebuild. Change a constant here and in the file it is compiled from, together.
+#
+#   python3 tools/check_robot_config.py         # from the repository root
+
+robot:
+  prototype: a
+  name: learn2race_a
+  role: competition and education
+  sbc: Raspberry Pi 4
+  os: Ubuntu 24.04 LTS
+  ros_distro: jazzy
+  bringup_launch: prototype_a.launch.py
+  bringup_config: learn2race_ws/src/learn2race_bringup/config/prototype_a.yaml
+
+firmware:
+  platformio_ini: firmware/platformio.ini
+  environment: esp32dev_pi_sensors       # the Pi owns the board's I2C sensors
+  micro_ros_arduino: v2.0.8-jazzy
+  serial_device: /dev/mcu                # USB, fixed name from setup_udev.sh
+  serial_baud: 921600
+
+drivetrain:
+  type: differential, rear drive, front ball caster
+  gear_ratio: 29.16                      # 320.76 hall pulses per output turn / 11 PPR
+  encoder_ppr: 11
+  counts_per_wheel_rev: 1283.04          # x4 quadrature
+  wheel_radius_m: 0.0318                 # mean effective radius (straight-line test, 2026-09-28)
+  left_wheel_radius_m: 0.03210
+  right_wheel_radius_m: 0.03150
+  track_width_m: 0.1674                  # effective (UMBmark); 0.1805 between wheel centres
+  max_pwm_duty: 200
+
+timing:
+  control_period_ms: 20
+  odom_publish_period_ms: 50
+  cmd_timeout_ms: 500
+
+# Fixed parts of the I2C bus 1, probed by the hardware check. required: false
+# devices only warn when absent.
+i2c:
+  bus: 1
+  devices:
+    - {name: QMI8658C IMU, address: 0x6b, required: true}
+    - {name: AK09918C magnetometer, address: 0x0c, required: true}
+    - {name: INA219 power monitor, address: 0x42, required: true}
+    - {name: LTR-303 start-light sensor, address: 0x29, required: true}
+    - {name: SSD1306 OLED, address: 0x3c, required: true}
+
+# Topics the hardware check expects with the bringup running outside
+# competition (LiDAR and display on). min_hz is about 60 % of the nominal rate.
+topics:
+  - {name: odom, type: nav_msgs/msg/Odometry, min_hz: 12}
+  - {name: imu/data_raw, type: sensor_msgs/msg/Imu, min_hz: 30}
+  - {name: imu/data, type: sensor_msgs/msg/Imu, min_hz: 30}
+  - {name: imu/mag, type: sensor_msgs/msg/MagneticField, min_hz: 12}
+  - {name: light/visible_plus_ir_raw, type: std_msgs/msg/UInt32, min_hz: 6}
+  - {name: battery_state, type: sensor_msgs/msg/BatteryState, min_hz: 0.6}
+  - {name: scan, type: sensor_msgs/msg/LaserScan, min_hz: 6}
+
+# Frame names. Positions of A's sensors are not yet measured (the geometry
+# block of prototype_a.yaml still holds zeros marked MEASURE).
+frames:
+  base: base_link                        # midpoint of the driven axle
+  odom: odom
+  imu: imu_link
+  laser: base_laser

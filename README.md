@@ -33,7 +33,8 @@ The robot is 206 mm wide across the wheels, which is 6 mm over the TrackBotGP li
 |---|---|
 | [`firmware/`](firmware/README.md) | ESP32 firmware (PlatformIO, micro-ROS): wheel speed control, odometry, LED |
 | [`learn2race_ws/`](learn2race_ws/README.md) | ROS 2 Jazzy workspace that runs on the Pi |
-| [`tools/`](tools/) | `robot.sh` (run helper), ROS graph export, topic statistics |
+| [`robot.yaml`](robot.yaml) | Robot identity and calibration constants, checked against the firmware and ROS configuration |
+| [`tools/`](tools/) | `robot.sh` (run helper), automatic update service, `robot.yaml` check, ROS graph export, topic statistics |
 | [`docs/references.md`](docs/references.md) | References cited in the code headers as `[Rnn]` |
 | [`photos/`](photos/) | Photographs of the robot |
 

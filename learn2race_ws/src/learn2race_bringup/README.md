@@ -32,6 +32,8 @@ The camera line follower is started separately
 | `config/prototype_a.yaml` | Parameters of every node: start light, referee guards, pit timing, FSM timeouts, LED colours, odometry geometry |
 | `config/track_portimao.yaml`, `track_monza.yaml`, `track_suzuka.yaml` | Per-track race settings: pit side, lap length, first-lap minimum, pit arming distance |
 
+`launch/hardware_check.launch.py` runs the first-line hardware check (`~/robot.sh check`, see USAGE.md).
+
 Other launch files: `drive_only`, `robot_only`, `xbox_drive`, `teleop_pc`,
 `remote_pc_joy` (driving and teleoperation), `i2c_sensors`, `all_sensors`,
 `calibrate_imu`, `calibrate_sensors`, `calibrate_stereo_cameras`, `stereo_cameras`,

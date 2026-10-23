@@ -22,6 +22,8 @@
 #   ~/robot.sh stop                        stop everything, including orphans
 #   ~/robot.sh status                      what runs, load, memory, power flags
 #   ~/robot.sh build [packages...]         colcon build, refused while running
+#   ~/robot.sh update                      pull the pinned revision and rebuild (tools/update_robot.sh)
+#   ~/robot.sh check [wheels_lifted:=true] hardware check: I2C, topics, LED, motors and encoders
 #   ~/robot.sh graph LABEL                 node/topic graph of the running system
 #   ~/robot.sh topics [SECONDS]            rate, timing and size of the main topics
 #   Every run also logs CPU and memory per process (pidstat.txt) and temperature,
@@ -78,8 +80,11 @@ stop_all() {
   echo "stopped ($left processes left), track light off"
 }
 
+updating() { systemctl is-active --quiet learn2race-update 2>/dev/null || pgrep -f "[u]pdate_robot.sh" >/dev/null; }
+
 start() {   # start <bringup args> -- <follower args> [env]
   if running; then echo "Already running: ~/robot.sh stop first"; exit 1; fi
+  if updating; then echo "An update is building (~/update_logs/latest.log): wait for it to finish."; exit 1; fi
   if ! rpicam-hello --list-cameras 2>/dev/null | grep -q imx219; then
     echo "Camera not detected: power off and reseat the ribbon cable."; exit 1
   fi
@@ -151,7 +156,21 @@ case "$1" in
   stop) stop_all ;;
   status)
     running && echo "RUNNING: $(pgrep -af '[r]os2 launch' | sed 's/.*launch //' | tr '\n' ';')" || echo "stopped"
-    uptime; tail -1 ~/health.log 2>/dev/null ;;
+    uptime; tail -1 ~/health.log 2>/dev/null
+    [ -f ~/.learn2race_version ] && echo "software: $(tr '\n' ' ' < ~/.learn2race_version)"
+    updating && echo "UPDATE IN PROGRESS: ~/update_logs/latest.log" ;;
+  update)
+    if running; then echo "Stop the robot first: ~/robot.sh stop"; exit 1; fi
+    if systemctl cat learn2race-update >/dev/null 2>&1; then
+      sudo systemctl start learn2race-update; tail -n 25 ~/update_logs/latest.log
+    else
+      bash "$(dirname "$(readlink -f ~/learn2race_ws)")/tools/update_robot.sh"
+    fi ;;
+  check)
+    if running; then echo "Stop the robot first: ~/robot.sh stop"; exit 1; fi
+    shift
+    echo "Hardware check. For the motor test, LIFT THE ROBOT and add wheels_lifted:=true."
+    bash -c "$ROS; ros2 launch learn2race_bringup hardware_check.launch.py prototype:=a $*" ;;
   build)
     if running; then echo "Stop the robot first (a build while running can make the Pi swap and freeze)."; exit 1; fi
     shift

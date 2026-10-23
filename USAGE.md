@@ -14,6 +14,8 @@ Everything on the robot is started through `~/robot.sh`. It runs the ROS 2 stack
 | `~/robot.sh build [packages…]` | `colcon build` (refused while the robot is running) |
 | `~/robot.sh graph LABEL` | Export the node and topic graph of the running system |
 | `~/robot.sh topics [SECONDS]` | Rate, timing and size of the main topics |
+| `~/robot.sh check [wheels_lifted:=true]` | Hardware check (below) |
+| `~/robot.sh update` | Pull the pinned revision and rebuild ([INSTALL.md](INSTALL.md#9-automatic-updates)) |
 
 Extra arguments:
 
@@ -32,6 +34,17 @@ Examples:
 ~/robot.sh race dragster 1.0
 ~/robot.sh practice 0.3 curve_gain:=0.7 record_every_n:=1    # record every frame
 ```
+
+### Hardware check
+
+`~/robot.sh check` tests the robot from the bus up and prints a PASS/FAIL list, saved to `~/run_logs/hardware_check-<time>.txt`. Use it after assembly, after a repair, and whenever the robot misbehaves, before looking at the software:
+
+```bash
+~/robot.sh check                       # robot.yaml, I2C devices, ESP32 link, sensor topics, status LED
+~/robot.sh check wheels_lifted:=true   # also motors and encoders: put the robot on a stand first
+```
+
+It starts the bringup outside competition mode, then checks in order: `robot.yaml`; each fixed I2C device answers at its address (absent means wiring or power); `/odom` arrives (agent, serial link and firmware); each sensor topic in `robot.yaml` publishes at its rate (silent means the driver or the device, slow means bus contention or settings); the status LED shows red, green, blue and white (watch it); and, with the wheels lifted, a slow forward command and a left turn compared with `/odom`. A wheel that fails is diagnosed further with `wheel_direction_test` (learn2race_evaluation).
 
 ### Run logs
 

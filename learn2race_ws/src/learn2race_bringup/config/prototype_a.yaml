@@ -217,10 +217,12 @@ geometry:
 
 odometry:
   ros__parameters:
-    wheel_radius: 0.0325
-    track_width: 0.1755       # derived from 204 mm outer / 147 mm inner axle width
-    encoder_ppr: 11           # measured: 1276 counts per wheel turn
-    gear_ratio: 29.16         # datasheet: 320.76 hall pulses / 11 PPR
+    # Same values as firmware/platformio.ini and robot.yaml (calibrated
+    # 2026-09-28); tools/check_robot_config.py fails if they drift apart.
+    wheel_radius: 0.0318      # mean effective radius; left 0.03210, right 0.03150
+    track_width: 0.1674       # effective (UMBmark); 180.5 mm between wheel centres
+    encoder_ppr: 11
+    gear_ratio: 29.16         # datasheet: 320.76 hall pulses / 11 PPR -> 1283.04 counts per wheel turn
     # Rear-drive: the caster is unloaded in acceleration and loaded in braking.
     # A ball caster can judder under load, which shows up as run-to-run spread
     # in stopping distance rather than as a bias.
